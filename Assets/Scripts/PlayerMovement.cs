@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -7,21 +8,21 @@ using UnityEngine.UI;
 public class PlayerMovement : MonoBehaviour
 {
 
-    private CharacterController characterController;
-    private Vector3 playerVelocity;
-    private bool _isGrounded;
+
 
 
     [SerializeField]
      float rotationSpeed=50f;
     [SerializeField]
     float playerSpeed=5f;
-  
-   public float jumpHeight = 1.0f;
-    /*
-    [SerializeField]
-    float jumpTime;
-    */
+
+
+    private CharacterController characterController;
+    private Vector3 playerVelocity;
+    private bool _isGrounded;
+
+    public float jumpHeight = 1.0f;
+
     private float gravityValue = Physics.gravity.y;
 
     private Vector2 inputVector;
@@ -31,6 +32,11 @@ public class PlayerMovement : MonoBehaviour
     public Vector3 currentMovement;
    public bool isMoveMentPressed { get; set; }
 
+
+    
+
+
+
     Animator animator;
 
     private float rotationFactorPerFrame = 1f;
@@ -38,7 +44,6 @@ public class PlayerMovement : MonoBehaviour
 
     PlayerInput playerInput;
 
-//    public GameObject target;
 
 
     private Animation legacyAnimation;
@@ -74,11 +79,21 @@ public class PlayerMovement : MonoBehaviour
 
 
 
+    public event Action StartLanding = delegate { };
+    public event Action StopLanding = delegate { };
+
+    public event Action StartJump = delegate { };
+    public event Action StopJump = delegate { };
+   
+
 
     private void Awake()
     {
-        animator = GetComponent<Animator>();
-        
+        GetComponent<InputController>().StartAttack += StartAttack;
+        GetComponent<InputController>().StopAttack += StopAttack;
+        GetComponent<InputController>().StartJump += m_StartJump;
+
+        animator = GetComponent<Animator>();     
 
         legacyAnimation = GetComponent<Animation>();
 
@@ -117,8 +132,9 @@ public class PlayerMovement : MonoBehaviour
            
             if (!animator.GetBool("Landing") && isJumping)
             {
-                animator.SetBool("Jump", false);
-                animator.SetBool("Landing", true);
+                StopJump();
+                StartLanding();
+
                 isJumping = false;
             }
 
@@ -127,9 +143,9 @@ public class PlayerMovement : MonoBehaviour
 
         if(playerVelocity.y <  -2.1)
         {
-            animator.SetBool("Jump", true);   
+            StartJump(); 
             isJumping = true;
-            animator.SetBool("Landing", false);
+            StopLanding();
         }
 
 
@@ -151,25 +167,28 @@ public class PlayerMovement : MonoBehaviour
 
 
 
-  public  void AttackMovement()
+    void StartAttack()
     {
+       isAttacking = true;
         Vector3 Movement = transform.forward * 1;
         transform.Rotate(Vector3.up * currentMovement.x * (rotationSpeed * Time.deltaTime));
         Movement.Normalize();
-
         characterController.Move(Movement * playerSpeed * Time.deltaTime);
     }
 
+    void StopAttack()
+    {
+        isAttacking = false;
+    }
 
 
-  public  void JumpFunc(float a)
+  void m_StartJump(float a)
     {
         playerVelocity.y = -2;
-        animator.SetBool("Jump", true);
          isJumping = true;
 
-        animator.SetBool("Landing", false);
-        playerVelocity.y += Mathf.Sqrt(a * -3.0f * gravityValue);
+        StopLanding();
+        playerVelocity.y += Mathf.Sqrt(jumpHeight * -3.0f * gravityValue);
     }
 
 
@@ -188,11 +207,11 @@ public class PlayerMovement : MonoBehaviour
     void PlayerOverlappedCheck()
     {
         if (playerOverlapped)
-        {         
-            animator.SetBool("Jump", false);
-            animator.SetBool("Landing", true);
+        {
+            StopJump();
+            StartLanding();
             isJumping = false;
-            JumpFunc(jumpHeight*0.5f);
+            m_StartJump(jumpHeight*0.5f);
         }
     }
 

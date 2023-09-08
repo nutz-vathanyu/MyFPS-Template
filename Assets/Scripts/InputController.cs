@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -10,8 +11,14 @@ public class InputController : MonoBehaviour
 
     PlayerInput playerInput;
 
-    Animator animator;
+    public event Action StartAttack = delegate { };
+    public event Action StopAttack = delegate { };
 
+    public event Action<float> StartJump = delegate { };
+
+    public event Action StartWalk = delegate { };
+    public event Action<string, float> WalkPos = delegate { };
+    public event Action StopWalk = delegate { };
 
 
     private void OnEnable()
@@ -28,7 +35,6 @@ public class InputController : MonoBehaviour
     {
         playerMovement = this.GetComponent<PlayerMovement>();
         playerInput = new PlayerInput();
-        animator = this .GetComponent<Animator>();
 
         playerInput.Controller.Movement.started += OnMoveMentInput;
         playerInput.Controller.Movement.performed += OnMoveMentInput;
@@ -61,25 +67,17 @@ public class InputController : MonoBehaviour
 
         if (context.started)
         {
-          //  Debug.Log("Start Attack");
+
 
         }
         if (context.performed)
         {
-            //  Debug.Log("Attack Performed");
-            animator.SetBool("Attack1", true);
-
-            playerMovement.AttackMovement();
-            playerMovement.isAttacking = true;
-
+            StartAttack();
         }
 
         if (context.canceled)
         {
-            // Debug.Log("Attack Canceled");
-            animator.SetBool("Attack1", false);
-            playerMovement.isAttacking = false;
-
+            StopAttack();
         }
     }
 
@@ -89,29 +87,20 @@ public class InputController : MonoBehaviour
       
         
         playerMovement.currentMovement.x = playerMovement.currentMovementInput.x;
-      //  Debug.Log("X: " + playerMovement.currentMovement.x);
         playerMovement.currentMovement.z = playerMovement.currentMovementInput.y;
-      //  Debug.Log("Y: " + playerMovement.currentMovement.z);
         playerMovement.isMoveMentPressed = playerMovement.currentMovementInput.x != 0 || playerMovement.currentMovementInput.y != 0;
 
-        animator.SetFloat("velocity x", playerMovement.currentMovement.x);
-        animator.SetFloat("velocity z", playerMovement.currentMovement.z);
-
-
+        WalkPos("velocity x",playerMovement.currentMovement.x);
+        WalkPos("velocity z", playerMovement.currentMovement.z);
 
         if(context.started)
         {
-            // if(!playerMovement.isJumping)
-            animator.SetBool("Walk", true);
+            StartWalk();
         }
-
-
-
-
 
         if(context.canceled)
         {
-            animator.SetBool("Walk", false);
+            StopWalk();
         }
 
 
@@ -119,8 +108,6 @@ public class InputController : MonoBehaviour
 
     void OnJumpInput(InputAction.CallbackContext context)
     {
-        //   animator.StopPlayback();
-
         if (context.started)
         {
 
@@ -130,15 +117,12 @@ public class InputController : MonoBehaviour
         {
             if (playerMovement.isGrounded && !playerMovement.isJumping)
             {
-                playerMovement.JumpFunc(playerMovement.jumpHeight);
-                //   playerVelocity.y += Mathf.Sqrt( jumpHeight* -3.0f * gravityValue);
-
+                StartJump(playerMovement.jumpHeight);
             }
         }
 
         if (context.canceled)
         {
-            //      isJumping = false;
         }
     }
 
